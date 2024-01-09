@@ -1,7 +1,7 @@
 package com.skraba.flink.enchiridion.core
 
 import org.docopt.{Docopt, DocoptExitException}
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /** A driver for the various flink jobs.
   */
@@ -27,8 +27,11 @@ object FlinkJobGo {
   )
 
   /** [[DocoptExitException]] constructors are protected. */
-  class InternalDocoptException(msg: String, val docopt: String = Doc)
-      extends RuntimeException(msg)
+  class InternalDocoptException(
+      msg: String,
+      ex: Throwable = None.orNull,
+      val docopt: String = Doc
+  ) extends RuntimeException(msg, ex)
 
   val Tasks: Seq[Task] = Seq(LocalInfoTask.Task)
 
@@ -39,9 +42,9 @@ object FlinkJobGo {
       |  FlinkJobGo [--debug] <command> [<ARGS>...]
       |
       |Options:
-      |  -h --help          Show this screen.
-      |  --version          Show version.
-      |  --debug            Log extra information to the console while executing.
+      |  -h --help    Show this screen.
+      |  --version    Show version.
+      |  --debug      Log extra information to the console while executing.
       |
       |Commands:
       |%s
@@ -80,7 +83,7 @@ object FlinkJobGo {
 
     // This is only here to rewrap any internal docopt exception with the current docopt
     if (cmd == "???")
-      throw new InternalDocoptException("Missing command", Doc)
+      throw new InternalDocoptException("Missing command", docopt = Doc)
 
     // Reparse with the specific command.
     val task = Tasks
@@ -96,7 +99,13 @@ object FlinkJobGo {
     } catch {
       // This is only here to rewrap any internal docopt exception with the current docopt
       case ex: InternalDocoptException =>
-        throw new InternalDocoptException(ex.getMessage, task.doc)
+        throw new InternalDocoptException(ex.getMessage, ex, task.doc)
+      case ex: DocoptExitException if ex.getMessage == null =>
+        throw new InternalDocoptException(
+          null,
+          ex,
+          task.doc
+        )
     }
   }
 
@@ -110,12 +119,15 @@ object FlinkJobGo {
         Option(if (ex.getExitCode == 0) System.out else System.err)
           .foreach(ps => {
             if (ex.getMessage != null) ps.println(ex.getMessage)
+            else ps.println(FlinkJobGo.Doc)
           })
         System.exit(ex.getExitCode)
       case ex: InternalDocoptException =>
         println(ex.docopt)
-        println()
-        println(ex.getMessage)
+        if (ex.getMessage != null) {
+          println()
+          println(ex.getMessage)
+        }
         System.exit(1)
       case ex: Exception =>
         println(Doc)

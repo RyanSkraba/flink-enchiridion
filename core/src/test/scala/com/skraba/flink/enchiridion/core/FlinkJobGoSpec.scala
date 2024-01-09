@@ -1,12 +1,11 @@
 package com.skraba.flink.enchiridion.core
 
-import com.skraba.flink.enchiridion.core.FlinkJobGo.{
-  InternalDocoptException,
-  go
-}
+import com.skraba.flink.enchiridion.core.FlinkJobGo.InternalDocoptException
+import com.skraba.flink.enchiridion.core.FlinkJobGoSpec.withFlinkJobGo
 import org.docopt.DocoptExitException
 import org.scalatest.funspec.AnyFunSpecLike
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
@@ -14,7 +13,11 @@ import scala.reflect.io.Streamable
 
 /** Unit tests for the CLI in the [[FlinkJobGo]] project.
   */
-class FlinkJobGoSpec extends AnyFunSpecLike with Matchers {
+class FlinkJobGoSpec
+    extends AnyFunSpecLike
+    with Matchers
+    with BeforeAndAfterEach
+    with BeforeAndAfterAll {
 
   describe("FlinkJobGo docopt check") {
     it("should have less than 80 characters per string for readability") {
@@ -34,10 +37,10 @@ class FlinkJobGoSpec extends AnyFunSpecLike with Matchers {
     }
   }
 
-  describe("FlinkJobGo valid commands") {
+  describe("FlinkJobGo invalid command lines") {
     it("throw an exception with --version") {
       val t = intercept[DocoptExitException] {
-        go("--version")
+        withFlinkJobGo("--version")
       }
       t.getExitCode shouldBe 0
       t.getMessage shouldBe FlinkJobGo.Version
@@ -45,58 +48,85 @@ class FlinkJobGoSpec extends AnyFunSpecLike with Matchers {
 
     it("throw an exception with --help") {
       val t = intercept[DocoptExitException] {
-        go("--help")
+        withFlinkJobGo("--help")
       }
       t.getExitCode shouldBe 0
       t.getMessage shouldBe FlinkJobGo.Doc
     }
 
-    it("throw an exception like --help when run bare") {
-      val t = intercept[DocoptExitException] {
-        go()
+    it(s"throws an exception with unknown options") {
+      for (
+        args <- Seq(
+          Seq("--garbage"),
+          Seq("--debug", "--garbage"),
+          Seq("--garbage", "--debug"),
+          Seq("--garbage", "garbage")
+        )
+      ) withClue(s"Using: $args") {
+        val t = intercept[DocoptExitException] {
+          withFlinkJobGo(args: _*)
+        }
+        t.getExitCode shouldBe 1
+        t.getMessage shouldBe null
       }
-      t.getExitCode shouldBe 0
-      t.getMessage shouldBe FlinkJobGo.Doc
     }
-  }
 
-  describe("FlinkJobGo command line options") {
-    it("throw an exception like --help when run without a command") {
+    it("throws an exception with an unknown command") {
       val t = intercept[InternalDocoptException] {
-        go("--debug")
-      }
-      t.getMessage shouldBe "Missing command"
-      t.docopt shouldBe FlinkJobGo.Doc
-    }
-
-    for (
-      args <- Seq(
-        Seq("--garbage"),
-        Seq("--debug", "--garbage"),
-        Seq("--garbage", "--debug"),
-        Seq("--garbage", "garbage")
-      )
-    ) it(s"throw an exception with unknown option $args") {
-      val t = intercept[DocoptExitException] {
-        go(args: _*)
-      }
-      t.getExitCode shouldBe 1
-      t.getMessage shouldBe null
-    }
-
-    for (
-      args <- Seq(
-        Seq("garbage"),
-        Seq("--debug", "garbage")
-      )
-    ) it(s"throw an exception when an unknown command is sent $args") {
-      val t = intercept[InternalDocoptException] {
-        go("garbage")
+        withFlinkJobGo("garbage")
       }
       t.getMessage shouldBe "Unknown command: garbage"
       t.docopt shouldBe FlinkJobGo.Doc
     }
   }
+
+  for (task <- FlinkJobGo.Tasks) {
+    describe(s"FlinkJobGo ${task.cmd} docopt check") {
+      it("should have less than 80 characters per string for readability") {
+        for (line <- task.doc.split("\n")) {
+          withClue(task.cmd -> line) {
+            line.length should be < 80
+          }
+        }
+      }
+    }
+
+    describe(s"MarkdGo ${task.cmd} invalid command lines") {
+      it("throws an exception with --version") {
+        val t = intercept[DocoptExitException] {
+          withFlinkJobGo(task.cmd, "--version")
+        }
+        t.getExitCode shouldBe 0
+        t.getMessage shouldBe FlinkJobGo.Version
+      }
+
+      it("throws an exception with --help") {
+        val t = intercept[DocoptExitException] {
+          withFlinkJobGo(task.cmd, "--help")
+        }
+        t.getExitCode shouldBe 0
+        t.getMessage shouldBe task.doc
+      }
+
+      it(s"throws an exception with unknown options") {
+        for (
+          args <- Seq(
+            Seq(task.cmd, "--garbage"),
+            Seq(task.cmd, "--debug", "--garbage"),
+            Seq(task.cmd, "--garbage", "--debug"),
+            Seq(task.cmd, "--garbage", "garbage")
+          )
+        ) withClue(s"Using: $args") {
+          val t = intercept[InternalDocoptException] {
+            withFlinkJobGo(args: _*)
+          }
+          t.docopt shouldBe task.doc
+          t.getMessage shouldBe null
+        }
+      }
+    }
+  }
+
 }
 
 object FlinkJobGoSpec {

@@ -8,7 +8,8 @@ _[**Enchiridion**](https://en.wikipedia.org/wiki/Enchiridion): **A small manual 
 <!-- 2020/05/25: 920 O'Reilly results
      2020/06/05: 4758 O'Reilly results (but changed the search URL)
      2020/07/30: 5043 O'Reilly results
-     2022/01/25: 5164 O'Reilly results -->
+     2022/01/25: 5164 O'Reilly results
+     2023/01/09: 6228 O'Reilly results -->
 
 Apache Flink is a big data, streaming execution engine that can be used to execute data processing jobs.
 This project describes how to do many common tasks using [Flink](https://flink.apache.org).
