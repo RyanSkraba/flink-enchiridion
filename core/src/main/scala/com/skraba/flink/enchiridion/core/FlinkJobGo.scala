@@ -1,7 +1,9 @@
 package com.skraba.flink.enchiridion.core
 
 import org.docopt.{Docopt, DocoptExitException}
-import scala.jdk.CollectionConverters._
+
+// import scala.jdk.CollectionConverters._
+import scala.collection.JavaConverters._
 
 /** A driver for the various flink jobs.
   */

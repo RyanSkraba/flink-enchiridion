@@ -16,6 +16,7 @@
 
   <properties>
     <maven.deploy.skip>false</maven.deploy.skip>
+    <!-- Launcher class -->
     <exec.mainClass>com.skraba.flink.enchiridion.core.FlinkJobGo</exec.mainClass>
   </properties>
 
